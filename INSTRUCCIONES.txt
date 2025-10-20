@@ -1,0 +1,144 @@
+===============================================================================
+                    TRANSFORMADOR DE CATÁLOGO EXCEL A IBERLIBROS
+===============================================================================
+
+DESCRIPCIÓN:
+Este programa transforma un archivo Excel con catálogo de libros al formato
+requerido por Iberlibros (archivo TXT separado por tabs).
+
+ESTRUCTURA DEL PROYECTO:
+├── input/                          # Carpeta para archivos de entrada
+│   └── articulos con sus precios - cleps.xls
+├── output/                         # Carpeta para archivos de salida
+│   ├── catalogo_iberlibros.txt     # Archivo principal de salida
+│   └── filas_descartadas.xlsx     # Filas que no cumplieron criterios
+├── venv/                           # Entorno virtual Python 3.9
+├── transform_excel.py              # Script principal
+├── requirements.txt                # Dependencias Python
+├── run_transform.bat              # Script de ejecución para Windows
+└── INSTRUCCIONES.txt              # Este archivo
+
+===============================================================================
+                                INSTALACIÓN
+===============================================================================
+
+REQUISITOS PREVIOS:
+- Python 3.9 instalado en el sistema
+- Archivo Excel con el catálogo en la carpeta 'input/'
+
+PASOS DE INSTALACIÓN:
+
+1. CREAR ENTORNO VIRTUAL:
+   python3.9 -m venv venv
+
+2. ACTIVAR ENTORNO VIRTUAL:
+   - En macOS/Linux: source venv/bin/activate
+   - En Windows: venv\Scripts\activate
+
+3. INSTALAR DEPENDENCIAS:
+   pip install -r requirements.txt
+
+===============================================================================
+                                   USO
+===============================================================================
+
+PREPARACIÓN:
+1. Coloca tu archivo Excel en la carpeta 'input/'
+2. Asegúrate de que el archivo se llame: "articulos con sus precios - cleps.xls"
+
+EJECUCIÓN:
+
+OPCIÓN 1 - MANUAL:
+1. Activa el entorno virtual: source venv/bin/activate
+2. Ejecuta: python transform_excel.py
+
+OPCIÓN 2 - AUTOMÁTICA (Windows):
+1. Doble clic en: run_transform.bat
+
+OPCIÓN 3 - DEBUGGER (VS Code):
+1. Abre el proyecto en VS Code
+2. Ve a "Run and Debug" (Ctrl+Shift+D)
+3. Selecciona "Python: Transform Excel Script"
+4. Presiona F5
+
+===============================================================================
+                              TRANSFORMACIONES
+===============================================================================
+
+El programa realiza las siguientes transformaciones:
+
+1. FILTRADO DE ARTÍCULOS:
+   - Solo procesa artículos con formato: 13 dígitos o 13 dígitos + U
+   - Ejemplo válido: 9788401346712 o 9788401346712U
+   - Los artículos inválidos se guardan en 'filas_descartadas.xlsx'
+
+2. LIMPIEZA DE DESCRIPCIÓN:
+   - Elimina saltos de línea (\n, \r)
+   - Convierte a texto plano
+
+3. FORMATO DE AUTORES:
+   - Cambia separador "/" por "; "
+   - Elimina espacios extra antes del separador
+   - Ejemplo: "García, Juan / Pérez, María" → "García, Juan; Pérez, María"
+
+4. CÁLCULO DE PRECIOS:
+   - Fórmula: (precio_librería + 4) × 1.20
+   - Ejemplo: precio 10€ → (10 + 4) × 1.20 = 16.80€
+
+5. CAMPOS FIJOS:
+   - quantity: siempre 1
+   - bookcondition: siempre "bueno"
+   - producttype: siempre "libro"
+
+===============================================================================
+                              ARCHIVOS DE SALIDA
+===============================================================================
+
+ARCHIVO PRINCIPAL: output/catalogo_iberlibros.txt
+- Formato: TXT separado por tabs
+- Codificación: UTF-8
+- Columnas: 29 campos requeridos por Iberlibros
+- Listo para importar en la plataforma
+
+ARCHIVO DE DESCARTADAS: output/filas_descartadas.xlsx
+- Contiene las filas que no cumplieron los criterios
+- Incluye columna "Motivo_Descarte" con la razón
+- Para revisión manual
+
+===============================================================================
+                                   LOGS
+===============================================================================
+
+El programa muestra información detallada durante la ejecución:
+- Total de filas procesadas
+- Filas válidas vs descartadas
+- Progreso de cada etapa
+- Resumen final del procesamiento
+
+===============================================================================
+                              SOLUCIÓN DE PROBLEMAS
+===============================================================================
+
+ERROR: "ModuleNotFoundError: No module named 'pandas'"
+SOLUCIÓN: Activa el entorno virtual antes de ejecutar
+
+ERROR: "Archivo de entrada no encontrado"
+SOLUCIÓN: Verifica que el archivo Excel esté en la carpeta 'input/'
+
+ERROR: "KeyError: 'Artículo'"
+SOLUCIÓN: Verifica que el Excel tenga las columnas correctas:
+- Artículo, Descripción, Editorial, Autor, Precio 1
+
+ERROR: Precios incorrectos
+SOLUCIÓN: Verifica que la columna 'Precio 1' contenga valores numéricos
+
+===============================================================================
+                                 CONTACTO
+===============================================================================
+
+Para soporte técnico o modificaciones del script, contacta al desarrollador.
+
+Versión: 1.0
+Fecha: Octubre 2025
+Python: 3.9+
+===============================================================================

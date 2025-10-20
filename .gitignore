@@ -1,0 +1,51 @@
+# Entorno virtual
+venv/
+env/
+
+# Archivos de entrada (pueden contener datos sensibles)
+input/*.xls
+input/*.xlsx
+
+# Archivos de salida (se generan automáticamente)
+output/*.txt
+output/*.xlsx
+
+# Logs
+*.log
+transform_log.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Archivos temporales
+*.tmp
+*.temp
