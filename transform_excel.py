@@ -30,6 +30,25 @@ def is_valid_article_format(article):
     check = bool(re.match(pattern_13_digits, article_str) or re.match(pattern_13_digits_u, article_str))
     return check
 
+def is_blacklisted_article(article):
+    """
+    Verifica si el artículo está en una lista de exclusión manual.
+    Estos artículos se eliminarán del catálogo incluso si el formato es válido.
+    """
+    # ⚙️ Lista de artículos que NO deben exportarse (ampliable)
+    blacklist = {
+        "2803202400001",  # ARTICULOS EN LOTE
+        # Agrega más aquí, por ejemplo:
+        # "00000011423",
+        # "1011423",
+    }
+
+    if pd.isna(article):
+        return False
+
+    article_str = str(article).strip()
+    return article_str in blacklist
+
 def clean_description(description):
     """
     Elimina saltos de línea de la descripción
@@ -50,15 +69,34 @@ def fix_author_separators(author):
 
 def calculate_price_with_markup(price):
     """
-    Calcula el precio según la fórmula: (precio librería + 4) + 20%
+    Calcula el precio según la nueva fórmula: Precio Base * 1.17 + 0.9
+    Donde Precio Base es el 'price' de la columna 'Precio 1'.
+    
+    Equivale a: (Precio Librería + 17%) + 0.9€
     """
+    # Verifica si el precio es nulo o cero
     if pd.isna(price) or price == 0:
         return 0
-    # Precio iberlibro = (precio librería + 4) + 20%
-    base_price = float(price) + 4
-    final_price = base_price * 1.20
-    return round(final_price, 2)
-
+        
+    try:
+        price_float = float(price)
+        
+        # Fórmula solicitada: (Precio base * 0.17) + Precio base + 0.9
+        # Precio base * 0.17 + Precio base es igual a Precio base * 1.17
+        
+        # 1. Aplicar el 17% de aumento sobre el precio base
+        price_after_markup = price_float * 1.17
+        
+        # 2. Sumar el margen fijo de 0.9
+        final_price = price_after_markup + 0.9
+        
+        return round(final_price, 2)
+        
+    except ValueError:
+        # Manejar el caso si 'price' no se puede convertir a float
+        logger.warning(f"Advertencia: El precio '{price}' no es numérico y se ignora.")
+        return 0
+        
 def transform_excel_to_txt(input_file, output_file, discarded_file):
     """
     Transforma el archivo Excel de entrada a formato TXT separado por tabs
@@ -71,25 +109,40 @@ def transform_excel_to_txt(input_file, output_file, discarded_file):
         df = pd.read_excel(input_file)
         logger.info(f"Archivo leído exitosamente. Total de filas: {len(df)}")
         
+        # === NUEVA LIMPIEZA INICIAL ===
+        # Elimina saltos de línea (\n, \r) de todas las celdas del archivo Excel
+        df = df.astype(str).replace({r'[\r\n]+': ' '}, regex=True)
+
         # Mostrar las columnas disponibles
         logger.info(f"Columnas encontradas: {list(df.columns)}")
         
         # Crear DataFrame para filas descartadas
         discarded_rows = []
         
-        # Filtrar filas con artículos válidos
-        logger.info("Filtrando artículos con formato válido...")
+       # Filtrar filas con artículos válidos y no incluidos en la lista negra
+        logger.info("Filtrando artículos con formato válido y no listados en la blacklist...")
+
+        logger.info("⚙️ Lista negra activa: se excluirán artículos definidos manualmente en 'is_blacklisted_article()'")cd 
+
         valid_mask = df['Artículo'].apply(is_valid_article_format)
-        valid_df = df[valid_mask].copy()
-        invalid_df = df[~valid_mask].copy()
-        
-        logger.info(f"Filas válidas: {len(valid_df)}")
-        logger.info(f"Filas descartadas por formato de artículo: {len(invalid_df)}")
-        
-        # Guardar filas descartadas
+        blacklist_mask = df['Artículo'].apply(is_blacklisted_article)
+
+        # Filas válidas = formato correcto Y NO están en blacklist
+        valid_df = df[valid_mask & ~blacklist_mask].copy()
+        invalid_df = df[~valid_mask | blacklist_mask].copy()
+
+        # Marcar las descartadas por blacklist con su motivo
         if len(invalid_df) > 0:
-            invalid_df['Motivo_Descarte'] = 'Formato de artículo inválido (no es 13 dígitos o 13 dígitos+U)'
+            # Motivo para artículos en blacklist
+            invalid_df.loc[blacklist_mask, 'Motivo_Descarte'] = 'Artículo en blacklist (exclusión manual)'
+
+            # Motivo para artículos con formato incorrecto
+            invalid_df.loc[~valid_mask, 'Motivo_Descarte'] = 'Formato de artículo inválido (no es 13 dígitos o 13 dígitos+U)'
+
             discarded_rows.append(invalid_df)
+
+        logger.info(f"Filas válidas: {len(valid_df)}")
+        logger.info(f"Filas descartadas: {len(invalid_df)}")
         
         # Crear DataFrame de salida con las columnas requeridas
         logger.info("Creando estructura de datos de salida...")
@@ -139,10 +192,37 @@ def transform_excel_to_txt(input_file, output_file, discarded_file):
         output_df['shippingtemplateid'] = ''  # Vacío
         output_df['language'] = ''  # Vacío
         
-        # Guardar archivo de salida en formato TXT separado por tabs
+        # === LIMPIEZA GLOBAL DE CAMPOS ===
+        logger.info("Limpiando saltos de línea, comillas y espacios en todos los campos...")
+
+        for col in output_df.columns:
+            output_df[col] = (
+                output_df[col]
+                .astype(str)
+                .replace({r'[\r\n]+': ' '}, regex=True)  # elimina saltos de línea
+                .str.replace('"', '', regex=False)       # elimina comillas dobles
+                .str.strip()                             # elimina espacios extremos
+            )
+
+        # Limpieza y normalización del campo precio
+        output_df['price'] = (
+            output_df['price']
+            .astype(str)
+            .str.replace(',', '.')
+            .str.strip()
+        )
+
+        # === GUARDAR ARCHIVO FINAL ===
         logger.info(f"Guardando archivo de salida: {output_file}")
-        output_df.reset_index(drop=True).to_csv(output_file, sep='\t', index=False, encoding='utf-8') # Revisar si el precio es formato europeo o americano
+        output_df.reset_index(drop=True).to_csv(
+            output_file,
+            sep='\t',
+            index=False,
+            encoding='utf-8',
+            quoting=3  # evita comillas automáticas
+        )
         logger.info(f"Archivo de salida guardado exitosamente con {len(output_df)} filas")
+
         
         # Guardar archivo de filas descartadas
         if discarded_rows:
@@ -171,15 +251,27 @@ if __name__ == "__main__":
     # Configuración de directorios y archivos
     input_dir = "input"
     output_dir = "output"
-    input_file = os.path.join(input_dir, "articulos con sus precios - cleps.xls")
     output_file = os.path.join(output_dir, "catalogo_iberlibros.txt")
     discarded_file = os.path.join(output_dir, "filas_descartadas.xlsx")
-    
+
     # Crear directorio de salida si no existe
     os.makedirs(output_dir, exist_ok=True)
-    
-    if os.path.exists(input_file):
-        transform_excel_to_txt(input_file, output_file, discarded_file)
+
+    # Buscar automáticamente un archivo Excel en la carpeta 'input'
+    excel_files = [
+        f for f in os.listdir(input_dir)
+        if f.lower().endswith((".xls", ".xlsx"))
+    ]
+
+    if not excel_files:
+        logger.error("Error: No se encontró ningún archivo Excel en la carpeta 'input/'.")
+        logger.error("Por favor, coloca un archivo .xls o .xlsx dentro de la carpeta 'input/'.")
     else:
-        logger.error(f"Error: Archivo de entrada '{input_file}' no encontrado.")
-        logger.error(f"Por favor, coloca tu archivo Excel en la carpeta '{input_dir}/'.")
+        # Si hay más de un archivo, advertir y usar solo el primero
+        if len(excel_files) > 1:
+            logger.warning(f"Advertencia: Se encontraron varios archivos Excel. Se procesará solo el primero: {excel_files[0]}")
+
+        input_file = os.path.join(input_dir, excel_files[0])
+        logger.info(f"Archivo Excel detectado automáticamente: {input_file}")
+
+        transform_excel_to_txt(input_file, output_file, discarded_file)
