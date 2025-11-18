@@ -38,6 +38,7 @@ def is_blacklisted_article(article):
     # ⚙️ Lista de artículos que NO deben exportarse (ampliable)
     blacklist = {
         "2803202400001",  # ARTICULOS EN LOTE
+        "9788433960795U"  # NO Y YO
         # Agrega más aquí, por ejemplo:
         # "00000011423",
         # "1011423",
@@ -122,7 +123,7 @@ def transform_excel_to_txt(input_file, output_file, discarded_file):
        # Filtrar filas con artículos válidos y no incluidos en la lista negra
         logger.info("Filtrando artículos con formato válido y no listados en la blacklist...")
 
-        logger.info("⚙️ Lista negra activa: se excluirán artículos definidos manualmente en 'is_blacklisted_article()'")cd 
+        logger.info("⚙️ Lista negra activa: se excluirán artículos definidos manualmente en 'is_blacklisted_article()'")
 
         valid_mask = df['Artículo'].apply(is_valid_article_format)
         blacklist_mask = df['Artículo'].apply(is_blacklisted_article)
