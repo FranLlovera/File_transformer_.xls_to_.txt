@@ -49,3 +49,13 @@ Thumbs.db
 # Archivos temporales
 *.tmp
 *.temp
+# Local backups and embedded distributions
+backups/
+backups/*
+# Windows embeddable python and DLLs
+*.exe
+*.dll
+python*.exe
+python*.dll
+# Editor temp
+.vscode/
