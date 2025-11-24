@@ -1,7 +1,7 @@
 
 # Transformador Excel → Iberlibros
 
-Transformador de catálogo Excel a formato TXT para importar en Iberlibros.
+Transformador de catálogo Excel a formato TXT para importar en Iberlibro.
 Este repositorio contiene un script en Python que procesa un fichero Excel
 con catálogo de libros y genera el archivo `output/catalogo_iberlibros.txt`
 listo para importar en la plataforma.
